@@ -2,6 +2,8 @@ const functions = require('firebase-functions');
 const admin = require('firebase-admin');
 const serviceAccount = require('./serviceAccount.json');
 const firebase = require('firebase');
+const express = require('express');
+const app = express();
 
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
@@ -19,9 +21,8 @@ firebase.initializeApp({
   measurementId: "G-TJM2BX5P7H"
 })
 
-const express = require('express');
-const app = express();
-const db = admin.firestore();
+
+const db = firebase.firestore();
 
 // get screams
 app.get('/screams', (req, res) => {
@@ -104,6 +105,8 @@ app.post('/signup', (req, res) => {
         return res.status(500).json({error: error.code})
       }
     })
-})
+});
+
+
 
 exports.api = functions.https.onRequest(app);
