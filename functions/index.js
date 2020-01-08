@@ -24,6 +24,48 @@ firebase.initializeApp({
 
 const db = firebase.firestore();
 
+// helper functions
+const isEmail = (email) => {
+  const regEx = /^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
+  
+  if (email.match(regEx)) return true;
+  else return false;
+}
+
+const isEmpty = (string) => {
+  if (string.trim() === '') return true;
+  else return false;
+}
+
+const FBAuth = (req, res, next) => {
+  let idToken;
+
+  if (req.headers.authorization && req.headers.authorization.startsWith('Bearer ')) {
+    idToken = req.headers.authorization.split('Bearer ')[1];
+  } else {
+    console.log('No token found');
+    return res.status(403).json({error: 'Unauthorized'})
+  }
+
+  admin.auth().verifyIdToken(idToken)
+    .then(decodedToken => {
+      req.user = decodedToken;
+      console.log(decodedToken);
+      return db.collection('users')
+      .where('userId', '==', req.user.uid)
+      .limit(1)
+      .get()
+    })
+    .then(data => {
+      req.user.handle = data.docs[0].data().handle;
+      return next();
+    })
+    .catch(error => {
+      console.error(error);
+      return res.status(403).json(error)
+    })
+}
+
 // get screams
 app.get('/screams', (req, res) => {
   db.collection('screams').orderBy('createadAt', 'desc').get()
@@ -42,10 +84,13 @@ app.get('/screams', (req, res) => {
 })
 
 // create scream
-app.post('/scream', (req, res) => {
+app.post('/scream', FBAuth, (req, res) => {
+  if (isEmpty(req.body.body)) {
+    return res.status(400).json({body: 'Must not be empty'});
+  }
   let scream = {
     body: req.body.body,
-    userHandle: req.body.userHandle,
+    userHandle: req.user.handle,
     createdAt: new Date().toISOString()
   }
 
@@ -59,18 +104,8 @@ app.post('/scream', (req, res) => {
   })
 });
 
-// helper functions
-const isEmail = (email) => {
-  const regEx = /^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
-  
-  if (email.match(regEx)) return true;
-  else return false;
-}
 
-const isEmpty = (string) => {
-  if (string.trim() === '') return true;
-  else return false;
-}
+
 
 // sign up route
 app.post('/signup', (req, res) => {
