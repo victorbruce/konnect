@@ -1,38 +1,33 @@
-const firebase = require('firebase');
-const config = require('./config');
+const { admin, db } = require('./admin');
 
-// firebase.initializeApp(config);
+module.exports = (req, res, next) => {
+  let idToken;
 
-module.exports = (req, res) => {
-  const user = {
-    email: req.body.email,
-    password: req.body.password
+  if (
+    req.headers.authorization &&
+    req.headers.authorization.startsWith('Bearer ')
+  ) {
+    idToken = req.headers.authorization.split('Bearer ')[1];
+  } else {
+    console.log('No token found');
+    return res.status(403).json({ error: 'Unauthorized '});
   }
-  // validation
-  let errors = {};
 
-  if (isEmpty(user.email)) {
-    errors.email = 'Must not be empty';
-  }
-  if (isEmpty(user.password)) {
-    errors.password = 'Must not be empty';
-  }
-  if (Object.keys(errors).length > 0) return res.status(400).json(errors);
-
-  firebase.auth().signInWithEmailAndPassword(user.email, user.password)
-    .then(data => {
-      return data.user.getIdToken();
+  admin.auth().verifyIdToken(idToken)
+    .then(decodedToken => {
+      console.log(decodedToken);
+      req.user = decodedToken;
+      return db.collection('users')
+        .where('userId', '==', req.user.uid)
+        .limit(1)
+        .get()
     })
-    .then(token => {
-      return res.json(token);
+    .then(data => {
+      req.user.handle = data.docs[0].data().handle;
+      return next();
     })
     .catch(error => {
-      console.log(error);
-      if (error.code === 'auth/invalid-email') {
-        res.status(403).json({general: 'Wrong credentials, please try again'});
-      } else if (error.code === 'auth/user-not-found') {
-        res.status(403).json({general: 'Wrong credentials, please try again'});
-      }
-      return res.status(500).json({error: error.code});
+      console.log('Error while verifying token');
+      return res.status(403).json({error: error.code})
     })
 }

@@ -1,9 +1,7 @@
 const {db} = require('../utils/admin');
-const firebase = require('firebase');
-const config = require('../utils/config');
-const {validateSignupData, validateLoginData} = require('../utils/validators');
+const firebase = require('../utils/config');
 
-// firebase.initializeApp(config);
+const {validateSignupData, validateLoginData} = require('../utils/validators');
 
 exports.signup = (req, res) => {
   const newUser = {

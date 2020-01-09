@@ -53,8 +53,3 @@ exports.validateLoginData = (data) => {
   }
 
 }
-
-module.exports = {
-  isEmpty,
-  isEmail
-}

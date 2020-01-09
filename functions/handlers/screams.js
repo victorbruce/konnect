@@ -1,8 +1,9 @@
 const {db} = require('../utils/admin');
-const {isEmpty} = require('../utils/validators');
 
 exports.getAllScreams = (req, res) => {
-  db.collection('screams').orderBy('createadAt', 'desc').get()
+  db.collection('screams')
+  .orderBy('createdAt', 'desc')
+  .get()
   .then(data => {
     let screams = [];
     data.forEach(doc => {
@@ -13,16 +14,19 @@ exports.getAllScreams = (req, res) => {
         createdAt: doc.data().createdAt
       })
     });
-    return res.json(screams);
-  }).catch(error =>  {
-    console.error('Get screams', error)})
-    return res.status(500).json({error: 'something went wrong'});
+    return res.status(200).json(screams);
+  })
+  .catch( err => {
+    console.log('Get screams', err);
+    res.status(500).json({err: err.code})
+  })
 }
 
 exports.postOneScream = (req, res) => {
-  if (isEmpty(req.body.body)) {
-    return res.status(400).json({body: 'Must not be empty'});
+  if (req.body.body.trim() === '') {
+    return res.status(400).json({ body: 'Body must not be empty' });
   }
+
   let scream = {
     body: req.body.body,
     userHandle: req.user.handle,
@@ -35,6 +39,6 @@ exports.postOneScream = (req, res) => {
   })
   .catch(error => {
     console.error('Create screams', error);
-    return res.status(500).json({error: 'something went wrong'});
+    return res.status(500).json({error: error.code});
   })
 }
